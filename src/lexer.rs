@@ -1,0 +1,100 @@
+use std::fs;
+use crate::{Result, Error};
+
+#[derive(Debug, Clone)]
+pub(crate) struct LexValue {
+    pub(crate) file: String,
+    pub(crate) start: usize,
+    pub(crate) end: usize,
+}
+
+impl LexValue {
+    fn new_last_one(l: &Lexer) -> LexValue {
+        LexValue { file: l.filename.clone(), start: l.index-1, end: l.index }
+    }
+    fn new_last(l: &Lexer, count: usize) -> LexValue {
+        LexValue { file: l.filename.clone(), start: l.index-count, end: l.index }
+    }
+    pub(crate) fn get(&self) -> String {
+        let cont = fs::read_to_string(self.file.clone()).unwrap();
+        return String::from_utf8_lossy(&cont[self.start..self.end].as_bytes()).into_owned();
+    }
+}
+
+#[derive(Debug, Clone)]
+
+pub(crate) struct Lexer {
+    pub(crate) cont: String,
+    pub(crate) filename: String,
+    pub(crate) index: usize,
+}
+
+#[derive(Debug, Clone)]
+
+pub(crate) enum LexToken {
+    Punc(LexValue),
+    Id(LexValue),
+    Op(LexValue),
+    Number(LexValue),
+}
+
+impl LexToken {
+    pub(crate) fn get_val(&self) -> LexValue{
+        match self {
+            LexToken::Punc(v) => v.clone(),
+            LexToken::Id(v) => v.clone(),
+            LexToken::Op(v) => v.clone(),
+            LexToken::Number(v) => v.clone(),
+        }
+    }
+}
+
+impl Lexer {
+    pub(crate) fn new(name: String) -> Lexer {
+        let cont = fs::read_to_string(&name).unwrap();
+        return Lexer {filename: name, cont: cont, index: 0};
+    }
+    /*
+    pub(crate) fn new_explicit(name: String, cont: String) -> Lexer {
+        return Lexer {filename: name, cont: cont, index: 0};
+    }*/
+
+    pub(crate) fn lex(&mut self) -> Result<LexToken> {
+        if self.index >= self.cont.as_bytes().len() {
+            return Err(Error { index: self.index, msg: String::from("Unexpected EOF")})
+        }
+        while self.cont.as_bytes()[self.index] as char == ' ' {
+            self.index+=1;
+        }
+        match self.cont.as_bytes()[self.index] as char {
+            '*' | '/' | '+' | '-' | '=' | '!' | '<' | '>' => {self.index+=1; Ok(LexToken::Op(LexValue::new_last_one(self))) },
+            '1'..='9' => {
+                let mut count = 0;
+                loop {
+                    let c = self.cont.as_bytes()[self.index] as char;
+                    if !matches!(c, '1'..='9') || self.index >= self.cont.len() {
+                        break;
+                    }
+                    count += 1;
+                    self.index += 1;
+                };
+                Ok(LexToken::Number(LexValue::new_last(self, count)))
+            },
+            'a'..='z'|'A'..='Z' => {
+                let mut count = 0;
+                loop {
+                    if self.index >= self.cont.len() { break; }
+                    let c = self.cont.as_bytes()[self.index] as char;
+                    if !matches!(c, 'a'..='z'|'A'..='Z'|'1'..='9') { break; }
+                    count += 1;
+                    self.index+=1;
+                }
+                Ok(LexToken::Id(LexValue::new_last(self, count)))
+            }
+            '{'|'}'|'\''|'"'|'('|')'|'['|']' => {self.index+=1; Ok(LexToken::Punc(LexValue::new_last_one(self))) }
+            _ => { self.index+=1; Err(Error { index: self.index-1, msg: format!("I don't know how to lex {}", self.cont.as_bytes()[self.index-1] as char)})}
+            
+        }
+        
+    }
+}
