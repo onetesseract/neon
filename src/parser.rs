@@ -82,22 +82,29 @@ pub(crate) enum Expr {
     Def(Def),
     Call(Call),
     FnDef(Box<Function>),
+    StructDef(StructDef),
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct StructDef {
+    name: String,
+    vals: Vec<Def>,
 }
 
 #[derive(Debug, Clone)]
 pub(crate) enum Type {
     I64,
-    Struct,
+    Struct(String),
 }
 
-#[derive(Debug)]
-pub(crate) struct Parser<'a> {
-    lexer: &'a mut lexer::Lexer,
-    types: &'a mut HashMap<String, Type>,
+#[derive(Debug, Clone)]
+pub(crate) struct Parser {
+    lexer: lexer::Lexer,
+    types: HashMap<String, Type>,
 }
 
-impl<'a> Parser<'a> {
-    pub(crate) fn new(l: &'a mut Lexer, t: &'a mut HashMap<String, Type>) -> Parser<'a> {
+impl Parser {
+    pub(crate) fn new(l: Lexer, t: HashMap<String, Type>) -> Parser {
         return Parser {lexer: l, types: t};
     }
     fn parse_punc(&mut self, v: LexValue) -> Result<Expr> {
@@ -151,6 +158,7 @@ impl<'a> Parser<'a> {
 
     fn parse_block(&mut self) -> Result<Expr> {
         let mut statements = vec![];
+        let mut is_defs = true;
         loop {
             if let Ok(x) =  self.lexer.clone().lex() {
                 if x.get_val().get() == String::from("}") {
@@ -159,7 +167,28 @@ impl<'a> Parser<'a> {
                 }
                 let s = self.parse_maybe();
                 let s = gimme!(s);
+                if !matches!(s, Expr::Def(_)) { is_defs = false; }
                 statements.push(s);
+            } else {
+                let e = self.lexer.lex().unwrap_err();
+                return Err(e);
+            }
+        }
+        if is_defs {
+            if let Ok(Expr::Variable(x)) =  self.clone().parse_maybe() {
+                self.clone().parse_maybe().unwrap();
+                let mut defs = vec![];
+                for i in statements {
+                    if let Expr::Def(d) = i {
+                        defs.push(d);
+                    } else { panic!(); }
+                }
+                let d = StructDef {
+                    name: x.clone(), vals: defs,                    
+                };
+                self.types.insert(x.clone(), Type::Struct(x));
+                return Ok(Expr::StructDef(d));
+
             }
         }
         return Ok(Expr::Block(Block {statements}));

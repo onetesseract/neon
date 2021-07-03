@@ -1,5 +1,6 @@
 mod lexer;
 mod parser;
+mod compiler;
 
 use std::collections::HashMap;
 
@@ -19,10 +20,10 @@ pub(crate) type Result<T> = std::result::Result<T, Error>;
 
 fn main() {
     //println!("Hello, world!");
-    let mut l = lexer::Lexer::new(String::from("test.neon"));
+    let l = lexer::Lexer::new(String::from("test.neon"));
     let mut t = HashMap::new();
     t.insert(String::from("i64"), parser::Type::I64);
-    let mut p = parser::Parser::new(&mut l, &mut t);
+    let mut p = parser::Parser::new(l, t);
     let _p = p.parse_maybe();
     println!("{:?}", _p);
 

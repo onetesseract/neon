@@ -1,1 +1,11 @@
-hello() i64 { hi*hi hello(p=o)}
+{
+    hi i64
+    no i64
+} steuct
+
+
+hello() i64 {
+    if xyz==zyx {
+        cry()
+    } else happy()
+}

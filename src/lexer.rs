@@ -1,6 +1,9 @@
 use std::fs;
 use crate::{Result, Error};
 
+const TWO_CHAR_OPS: [&'static str; 7] = ["==", ">=", "=>", "<=", "=<", "||", "&&"];
+const WHITESPACE: [char; 3] = [' ', '\n', '\t'];
+
 #[derive(Debug, Clone)]
 pub(crate) struct LexValue {
     pub(crate) file: String,
@@ -63,11 +66,19 @@ impl Lexer {
         if self.index >= self.cont.as_bytes().len() {
             return Err(Error { index: self.index, msg: String::from("Unexpected EOF")})
         }
-        while self.cont.as_bytes()[self.index] as char == ' ' {
+        while WHITESPACE.contains(&(self.cont.as_bytes()[self.index] as char)) {
             self.index+=1;
         }
         match self.cont.as_bytes()[self.index] as char {
-            '*' | '/' | '+' | '-' | '=' | '!' | '<' | '>' => {self.index+=1; Ok(LexToken::Op(LexValue::new_last_one(self))) },
+            '*' | '/' | '+' | '-' | '=' | '!' | '<' | '>' => {self.index+=1;
+                if !(self.index >= self.cont.as_bytes().len()) {
+                    if TWO_CHAR_OPS.contains(&std::str::from_utf8(&self.cont.as_bytes()[self.index-1..self.index+1]).unwrap()) {
+                        self.index+=1;
+                        return Ok(LexToken::Op(LexValue::new_last(self, 2)));
+                    }
+                }
+                Ok(LexToken::Op(LexValue::new_last_one(self))) 
+            },
             '1'..='9' => {
                 let mut count = 0;
                 loop {
