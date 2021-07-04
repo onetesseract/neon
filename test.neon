@@ -1,11 +1,1 @@
-{
-    hi i64
-    no i64
-} steuct
-
-
-hello() i64 {
-    if xyz==zyx {
-        cry()
-    } else happy()
-}
+hello() i64

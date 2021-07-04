@@ -44,13 +44,13 @@ pub(crate) struct If {
 
 #[derive(Debug, Clone)]
 pub(crate) struct Block {
-    statements: Vec<Expr>
+    pub(crate) statements: Vec<Expr>
 }
 
 #[derive(Debug, Clone)]
 pub(crate) struct Def {
-    name: String,
-    typ: Type,
+    pub(crate) name: String,
+    pub(crate) typ: Type,
 }
 
 #[derive(Debug, Clone)]
@@ -62,14 +62,14 @@ pub(crate) struct Prototype {
 
 #[derive(Debug, Clone)]
 pub(crate) struct Call {
-    name: String,
-    args: Vec<Expr>,
+    pub(crate) name: String,
+    pub(crate) args: Vec<Expr>,
 }
 
 #[derive(Debug, Clone)]
 pub(crate) struct Function {
-    proto: Prototype,
-    body: Expr,
+    pub(crate) proto: Prototype,
+    pub(crate) body: Expr,
 }
 
 #[derive(Debug, Clone)]
