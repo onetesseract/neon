@@ -1,6 +1,6 @@
 use std::{collections::HashMap};
 pub(crate) type Result<T> = std::result::Result<T, String>;
-use inkwell::{self, builder::Builder, context::Context, module::Module, types::{BasicType, BasicTypeEnum}, values::{BasicValue, BasicValueEnum, FunctionValue, PointerValue}};
+use inkwell::{self, builder::Builder, context::Context, module::Module, types::{BasicType, BasicTypeEnum}, values::{BasicValue, BasicValueEnum, FunctionValue, IntValue, PointerValue}};
 use crate::parser::{Expr, Function, Type};
 
 macro_rules! gimme {
@@ -54,9 +54,88 @@ impl<'ctx> Compiler<'ctx> {
         Ok(b.build_alloca(ty, &name))
     }
 
+    fn build_add(&self, lhs: BasicValueEnum<'ctx>, rhs: BasicValueEnum<'ctx>) -> Result<Option<BasicValueEnum>> {
+        match &lhs.get_type() {
+            BasicTypeEnum::ArrayType(_) => todo!(),
+            BasicTypeEnum::FloatType(_) => Ok(Some(self.builder.build_float_add(lhs.into_float_value(), rhs.into_float_value(), "tmpfloatadd").as_basic_value_enum())),
+            BasicTypeEnum::IntType(_) => Ok(Some(self.builder.build_int_add(lhs.into_int_value(), rhs.into_int_value(), "tmpintadd").as_basic_value_enum())),
+            BasicTypeEnum::PointerType(_) => todo!(),
+            BasicTypeEnum::StructType(_) => todo!(),
+            BasicTypeEnum::VectorType(_) => todo!(),
+        }
+    }
+
+    fn build_mul(&self, lhs: BasicValueEnum<'ctx>, rhs: BasicValueEnum<'ctx>) -> Result<Option<BasicValueEnum>> {
+        match &lhs.get_type() {
+            BasicTypeEnum::ArrayType(_) => todo!(),
+            BasicTypeEnum::FloatType(_) => Ok(Some(self.builder.build_float_mul(lhs.into_float_value(), rhs.into_float_value(), "tmpfloatmul").as_basic_value_enum())),
+            BasicTypeEnum::IntType(_) => Ok(Some(self.builder.build_int_mul(lhs.into_int_value(), rhs.into_int_value(), "tmpintmul").as_basic_value_enum())),
+            BasicTypeEnum::PointerType(_) => todo!(),
+            BasicTypeEnum::StructType(_) => todo!(),
+            BasicTypeEnum::VectorType(_) => todo!(),
+        }
+    }
+
+    fn build_sub(&self, lhs: BasicValueEnum<'ctx>, rhs: BasicValueEnum<'ctx>) -> Result<Option<BasicValueEnum>> {
+        match &lhs.get_type() {
+            BasicTypeEnum::ArrayType(_) => todo!(),
+            BasicTypeEnum::FloatType(_) => Ok(Some(self.builder.build_float_sub(lhs.into_float_value(), rhs.into_float_value(), "tmpfloatsub").as_basic_value_enum())),
+            BasicTypeEnum::IntType(_) => Ok(Some(self.builder.build_int_sub(lhs.into_int_value(), rhs.into_int_value(), "tmpintsub").as_basic_value_enum())),
+            BasicTypeEnum::PointerType(_) => todo!(),
+            BasicTypeEnum::StructType(_) => todo!(),
+            BasicTypeEnum::VectorType(_) => todo!(),
+        }
+    }
+
+    fn build_div(&self, lhs: BasicValueEnum<'ctx>, rhs: BasicValueEnum<'ctx>) -> Result<Option<BasicValueEnum>> {
+        match &lhs.get_type() {
+            BasicTypeEnum::ArrayType(_) => todo!(),
+            BasicTypeEnum::FloatType(_) => Ok(Some(self.builder.build_float_div(lhs.into_float_value(), rhs.into_float_value(), "tmpfloatdiv").as_basic_value_enum())),
+            BasicTypeEnum::IntType(_) => Ok(Some(self.builder.build_int_signed_div(lhs.into_int_value(), rhs.into_int_value(), "tmpintdiv").as_basic_value_enum())),
+            BasicTypeEnum::PointerType(_) => todo!(),
+            BasicTypeEnum::StructType(_) => todo!(),
+            BasicTypeEnum::VectorType(_) => todo!(),
+        }
+    }
+
+    fn build_eq_comp(&self, lhs: BasicValueEnum<'ctx>, rhs: BasicValueEnum<'ctx>) -> Result<Option<BasicValueEnum>> {
+        match &lhs.get_type() {
+            BasicTypeEnum::ArrayType(_) => todo!(),
+            BasicTypeEnum::FloatType(_) => Ok(Some(self.builder.build_float_compare(inkwell::FloatPredicate::OEQ, lhs.into_float_value(), rhs.into_float_value(), "tmpfloatcmp").as_basic_value_enum())),
+            BasicTypeEnum::IntType(_) => Ok(Some(self.builder.build_int_compare(inkwell::IntPredicate::EQ, lhs.into_int_value(), rhs.into_int_value(), "tmpintdiv").as_basic_value_enum())),
+            BasicTypeEnum::PointerType(_) => todo!(),
+            BasicTypeEnum::StructType(_) => todo!(),
+            BasicTypeEnum::VectorType(_) => todo!(),
+        }
+    }
+
+
+    fn build_assign(&self, lhs: BasicValueEnum<'ctx>, rhs: BasicValueEnum<'ctx>) -> Result<Option<BasicValueEnum>> {
+        self.builder.build_store(lhs.into_pointer_value(), rhs);
+        Ok(None)
+    }
+
+
+
     fn compile(&self, e: Expr) -> Result<Option<BasicValueEnum>> {
         match e {
-            Expr::Binary(_) => todo!(),
+            Expr::Binary(b) => {
+                let lhs = gimme_opt!(gimme!(self.compile(b.left)), String::from("void"));
+                let rhs = gimme_opt!(gimme!(self.compile(b.right)), String::from("void"));
+                match b.op {
+                    crate::parser::BinaryOps::Assign => self.build_assign(lhs, rhs),
+                    crate::parser::BinaryOps::Add => self.build_add(lhs, rhs),
+                    crate::parser::BinaryOps::Sub => self.build_sub(lhs, rhs),
+                    crate::parser::BinaryOps::Mul => self.build_mul(lhs, rhs),
+                    crate::parser::BinaryOps::Div => self.build_div(lhs, rhs),
+                    crate::parser::BinaryOps::Equal => self.build_eq_comp(lhs, rhs),
+                    crate::parser::BinaryOps::NEqual => todo!(),
+                    crate::parser::BinaryOps::Less => todo!(),
+                    crate::parser::BinaryOps::More => todo!(),
+                    crate::parser::BinaryOps::LessEqual => todo!(),
+                    crate::parser::BinaryOps::MoreEqual => todo!(),
+                }
+            },
             Expr::Variable(v) => {
                 let val = self.variables.get(&v);
                 match val {
@@ -64,7 +143,49 @@ impl<'ctx> Compiler<'ctx> {
                     None => Err(format!("Cannot find variable {}", v)),
                 }
             },
-            Expr::If(_) => todo!(),
+            Expr::If(i) => { // TODO: optimise so bools actually exist
+                let cond = gimme_opt!(gimme!(self.compile(i.cond)), format!("Cannot use {:?} as boolean", i.cond));
+                let comp: IntValue = match cond {
+                    BasicValueEnum::ArrayValue(_) => todo!(),
+                    BasicValueEnum::IntValue(i) => { self.builder.build_int_compare(inkwell::IntPredicate::NE, i, self.context.i8_type().const_zero(), "tmpintcmp")},
+                    BasicValueEnum::FloatValue(_) => todo!(),
+                    BasicValueEnum::PointerValue(_) => todo!(),
+                    BasicValueEnum::StructValue(_) => todo!(),
+                    BasicValueEnum::VectorValue(_) => todo!(),
+                };
+                let parent = gimme_opt!(self.fn_val, String::from("this shouldnt happen"));
+                let then_bb = self.context.append_basic_block(parent, "then_branch");
+                let else_bb = self.context.append_basic_block(parent, "else_branch");
+                let cont_bb = self.context.append_basic_block(parent, "cont_branch");
+                let branch = self.builder.build_conditional_branch(comp, then_bb, else_bb);
+
+                self.builder.position_at_end(then_bb);
+                let then_val = gimme!(self.compile(i.then));
+                self.builder.build_unconditional_branch(cont_bb);
+
+                self.builder.position_at_end(else_bb);
+                let else_val: Option<BasicValueEnum> = if let Some(x) = i.els {
+                    gimme!(self.compile(x))
+                } else { None };
+                self.builder.build_unconditional_branch(cont_bb);
+
+                if let Some(t) = then_val {
+                    if let Some(e) = else_val {
+                        if t.get_type() == e.get_type() {
+                            let phi = self.builder.build_phi(t.get_type(), "tmpifphi");
+                            phi.add_incoming(&[
+                                (&t, then_bb),
+                                (&e, else_bb),
+                            ]);
+                            return Ok(Some(phi.as_basic_value()));
+                        } else {
+                            return Err(format!("Then-val not the same as else-val"));
+                        }
+                    }
+                }
+
+                Ok(None)
+            },
             Expr::Number(n) => {Ok(Some(self.context.i64_type().const_int(n as u64, false).as_basic_value_enum()))},
             Expr::Block(b) => {
                 for i in b.statements {
@@ -92,12 +213,14 @@ impl<'ctx> Compiler<'ctx> {
                 }
                 let c = self.builder.build_call(fun, args.as_slice(), "tmpcall").try_as_basic_value().left().unwrap();
                 Ok(Some(c))
-
             },
-            Expr::FnDef(f) => {
-
-            },
+            Expr::FnDef(f) => todo!(),
             Expr::StructDef(_) => todo!(),
         }
+    }
+
+    fn compile_fn(&self, f: Function) -> Result<FunctionValue> {
+        let arg_types = vec![];
+        let fn_type = self.resolve_type(f.proto.ty).fn;
     }
 }

@@ -30,16 +30,16 @@ pub(crate) enum BinaryOps {
 
 #[derive(Debug, Clone)]
 pub(crate) struct Binary {
-    left: Expr,
-    op: BinaryOps,
-    right: Expr,
+    pub(crate) left: Expr,
+    pub(crate) op: BinaryOps,
+    pub(crate) right: Expr,
 }
 
 #[derive(Debug, Clone)]
 pub(crate) struct If {
-    cond: Expr,
-    then: Expr,
-    els: Option<Expr>,
+    pub(crate) cond: Expr,
+    pub(crate) then: Expr,
+    pub(crate) els: Option<Expr>,
 }
 
 #[derive(Debug, Clone)]
@@ -55,9 +55,9 @@ pub(crate) struct Def {
 
 #[derive(Debug, Clone)]
 pub(crate) struct Prototype {
-    name: String,
-    args: Vec<Def>,
-    ty: Type,
+    pub(crate) name: String,
+    pub(crate) args: Vec<Def>,
+    pub(crate) ty: Type,
 }
 
 #[derive(Debug, Clone)]
